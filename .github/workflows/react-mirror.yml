@@ -1,0 +1,74 @@
+name: Mirror React Repository
+
+on:
+  # Runs every day at 02:00 UTC
+  schedule:
+    - cron: '0 2 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+  # Run on pushes to main branch (for workflow updates)
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/mirror-react.yml'
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    name: Mirror React Repository
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Check out to mirror branch, create if doesn't exist
+          ref: mirror
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch React Repository
+        run: |
+          # Remove everything except .git directory
+          find . -mindepth 1 ! -regex '^./.git\(/.*\)?' -delete
+
+          # Add React remote and fetch
+          git remote add react https://github.com/facebook/react.git
+          git fetch react main
+
+          # Reset to React's main branch
+          git reset --hard react/main
+
+      - name: Update Mirror Info
+        run: |
+          # Create or update mirror information file
+          cat > MIRROR_INFO.md << EOF
+          # React Repository Mirror
+
+          This branch contains a mirror of the [React](https://github.com/facebook/react) repository.
+
+          ## Mirror Information
+          - Original Repository: [facebook/react](https://github.com/facebook/react)
+          - Last Updated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - Mirror Maintainer: [@Zaid-maker](https://github.com/Zaid-maker)
+
+          ## Important Notes
+          - This is NOT the official React repository
+          - For the actual project, please visit [facebook/react](https://github.com/facebook/react)
+          - This mirror is maintained for educational purposes only
+
+          ## Update Schedule
+          This mirror is automatically updated daily at 02:00 UTC using GitHub Actions.
+          EOF
+
+          # Add and commit the mirror info
+          git add MIRROR_INFO.md
+          git commit -m "Update mirror information [skip ci]" || true
+
+      - name: Push Changes
+        run: |
+          git push origin mirror
