@@ -71,4 +71,4 @@ jobs:
 
       - name: Push Changes
         run: |
-          git push origin mirror
+          git push --force origin mirror
